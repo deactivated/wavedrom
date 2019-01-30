@@ -19,6 +19,21 @@ function appendSaveAsDialog (index, output) {
         }
     }
 
+    function getDiagramSVG() {
+        var firstDiv, html;
+
+        html = '';
+        if (index !== 0) {
+            firstDiv = document.getElementById(output + 0);
+            html += firstDiv.innerHTML.substring(166, firstDiv.innerHTML.indexOf('<g id="waves_0">'));
+        }
+
+        return 'data:image/svg+xml;base64,' + btoa([
+            div.innerHTML.slice(0, 166),
+            html,
+            div.innerHTML.slice(166)].join(''));
+    }
+
     div = document.getElementById(output + index);
 
     div.childNodes[0].addEventListener('contextmenu',
@@ -26,18 +41,17 @@ function appendSaveAsDialog (index, output) {
             var list, savePng, saveSvg;
 
             menu = document.createElement('div');
-
             menu.className = 'wavedromMenu';
             menu.style.top = e.y + 'px';
             menu.style.left = e.x + 'px';
 
             list = document.createElement('ul');
             savePng = document.createElement('li');
-            savePng.innerHTML = 'Save as PNG';
+            savePng.innerHTML = '<a href="#">Save as PNG</a>';
             list.appendChild(savePng);
 
             saveSvg = document.createElement('li');
-            saveSvg.innerHTML = 'Save as SVG';
+            saveSvg.innerHTML = '<a href="#">Save as SVG</a>';
             list.appendChild(saveSvg);
 
             //var saveJson = document.createElement('li');
@@ -45,63 +59,49 @@ function appendSaveAsDialog (index, output) {
             //list.appendChild(saveJson);
 
             menu.appendChild(list);
-
             document.body.appendChild(menu);
 
-            savePng.addEventListener('click',
-                function () {
-                    var html, firstDiv, svgdata, img, canvas, context, pngdata, a;
+            function removeMenu() {
+                menu.parentNode.removeChild(menu);
+                document.body.removeEventListener('mousedown', closeMenu, false);
+            }
 
-                    html = '';
-                    if (index !== 0) {
-                        firstDiv = document.getElementById(output + 0);
-                        html += firstDiv.innerHTML.substring(166, firstDiv.innerHTML.indexOf('<g id="waves_0">'));
+            savePng.children[0].addEventListener('click',
+                function (evt) {
+                    var img;
+                    if (savePng.children[0].download) {
+                        window.setTimeout(removeMenu, 100);
+                        return;
                     }
-                    html = [div.innerHTML.slice(0, 166), html, div.innerHTML.slice(166)].join('');
-                    svgdata = 'data:image/svg+xml;base64,' + btoa(html);
+
+                    evt.preventDefault();
+
                     img = new Image();
-                    img.src = svgdata;
-                    canvas = document.createElement('canvas');
-                    canvas.width = img.width;
-                    canvas.height = img.height;
-                    context = canvas.getContext('2d');
-                    context.drawImage(img, 0, 0);
+                    img.src = getDiagramSVG();
+                    img.addEventListener('load', function() {
+                        var canvas, context, pngdata;
+                        canvas = document.createElement('canvas');
+                        canvas.width = img.width;
+                        canvas.height = img.height;
+                        context = canvas.getContext('2d');
+                        context.drawImage(img, 0, 0);
 
-                    pngdata = canvas.toDataURL('image/png');
+                        pngdata = canvas.toDataURL('image/png');
 
-                    a = document.createElement('a');
-                    a.href = pngdata;
-                    a.download = 'wavedrom.png';
-                    a.click();
-
-                    menu.parentNode.removeChild(menu);
-                    document.body.removeEventListener('mousedown', closeMenu, false);
+                        savePng.children[0].href = pngdata;
+                        savePng.children[0].download = 'wavedrom.png';
+                        savePng.children[0].click();
+                    }, false);
                 },
                 false
             );
 
-            saveSvg.addEventListener('click',
+            saveSvg.children[0].addEventListener('click',
                 function () {
-                    var html,
-                        firstDiv,
-                        svgdata,
-                        a;
+                    saveSvg.children[0].href = getDiagramSVG();
+                    saveSvg.children[0].download = 'wavedrom.svg';
 
-                    html = '';
-                    if (index !== 0) {
-                        firstDiv = document.getElementById(output + 0);
-                        html += firstDiv.innerHTML.substring(166, firstDiv.innerHTML.indexOf('<g id="waves_0">'));
-                    }
-                    html = [div.innerHTML.slice(0, 166), html, div.innerHTML.slice(166)].join('');
-                    svgdata = 'data:image/svg+xml;base64,' + btoa(html);
-
-                    a = document.createElement('a');
-                    a.href = svgdata;
-                    a.download = 'wavedrom.svg';
-                    a.click();
-
-                    menu.parentNode.removeChild(menu);
-                    document.body.removeEventListener('mousedown', closeMenu, false);
+                    window.setTimeout(removeMenu, 100);
                 },
                 false
             );
